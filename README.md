@@ -7,12 +7,6 @@ A modular, privacy-preserving, decentralized P2P networking library for Node.js.
 - Event-driven, extensible architecture
 - **NAT traversal (UDP hole punching) for peer connectivity**
 
-## Installation
-
-```
-npm install <your-library-name>
-```
-
 *(If using locally, clone and use `npm link` or import directly by path)*
 
 ## Usage Example
