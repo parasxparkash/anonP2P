@@ -1,0 +1,25 @@
+{
+  "name": "anonymous-p2p",
+  "version": "1.0.0",
+  "description": "A modular, privacy-preserving, decentralized P2P networking library for Node.js.",
+  "main": "index.js",
+  "types": "",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "keywords": [
+    "p2p",
+    "onion-routing",
+    "dht",
+    "anonymous",
+    "network",
+    "nodejs"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {}
+} 
