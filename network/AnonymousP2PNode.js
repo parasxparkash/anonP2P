@@ -8,14 +8,20 @@ const KademliaNode = require('../core/KademliaNode');
 /**
  * AnonymousP2PNode is the main class for running a decentralized, anonymous P2P node.
  * Handles peer connections, message mixing, onion routing, DHT, and NAT traversal.
+ * Now supports meshType ('structured' or 'unstructured') and node roles ('supernode' or 'leaf').
  * @extends EventEmitter
  */
 class AnonymousP2PNode extends EventEmitter {
     /**
      * Create a new AnonymousP2PNode instance.
      * @param {number} port - The TCP/UDP port to listen on (default 3000).
+     * @param {object} [options] - Optional configuration.
+     * @param {'supernode'|'leaf'} [options.role='supernode'] - Node role in structured mesh.
+     * @param {'structured'|'unstructured'} [options.meshType='unstructured'] - Mesh topology type.
+     * @param {Array<string>} [options.supernodeList=[]] - List of supernode addresses for structured mesh.
+     * @param {number} [options.maxPeerConnections=8] - Max peer connections for unstructured mesh.
      */
-    constructor(port = 3000) {
+    constructor(port = 3000, options = {}) {
         super();
         /** @type {number} */
         this.port = port;
@@ -33,8 +39,17 @@ class AnonymousP2PNode extends EventEmitter {
         this.coverTraffic = true;
         /** @type {number} */
         this.mixingDelay = 100; // ms
+        /** @type {'supernode'|'leaf'} */
+        this.role = options.role || 'supernode';
+        /** @type {'structured'|'unstructured'} */
+        this.meshType = options.meshType || 'unstructured';
+        /** @type {Array<string>} */
+        this.supernodeList = options.supernodeList || [];
+        /** @type {number} */
+        this.maxPeerConnections = options.maxPeerConnections || 8;
         this.setupMixingNode();
         this.startCoverTraffic();
+        this.initializeMeshConnections();
     }
 
     /**
@@ -47,6 +62,37 @@ class AnonymousP2PNode extends EventEmitter {
         this.server.listen(this.port, () => {
             console.log(`Anonymous P2P node listening on port ${this.port}`);
         });
+    }
+
+    /**
+     * Initialize mesh connections based on meshType and role.
+     */
+    async initializeMeshConnections() {
+        if (this.meshType === 'structured') {
+            if (this.role === 'supernode') {
+                // Connect to all other supernodes in the list (except self)
+                for (const addr of this.supernodeList) {
+                    if (!addr.endsWith(`:${this.port}`)) {
+                        await this.connectToPeer(addr);
+                    }
+                }
+            } else if (this.role === 'leaf') {
+                // Connect only to supernodes
+                for (const addr of this.supernodeList) {
+                    await this.connectToPeer(addr);
+                }
+            }
+        } else {
+            // Unstructured: connect to up to maxPeerConnections random peers from DHT
+            setTimeout(async () => {
+                const allNodes = this.dht.buckets.flat().map(n => n.address).filter(addr => !addr.endsWith(`:${this.port}`));
+                const unique = Array.from(new Set(allNodes));
+                const shuffled = unique.sort(() => 0.5 - Math.random());
+                for (const addr of shuffled.slice(0, this.maxPeerConnections)) {
+                    await this.connectToPeer(addr);
+                }
+            }, 2000); // Wait a bit for DHT to populate
+        }
     }
 
     /**

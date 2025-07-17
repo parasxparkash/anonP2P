@@ -6,52 +6,51 @@ A modular, privacy-preserving, decentralized P2P networking library for Node.js.
 - Pseudonymous and ephemeral identity management
 - Event-driven, extensible architecture
 - **NAT traversal (UDP hole punching) for peer connectivity**
+- **Configurable mesh topology: structured (supernode/leaf) or unstructured**
 
 *(If using locally, clone and use `npm link` or import directly by path)*
 
 ## Usage Example
 
 ```js
-const { AnonymousP2PNode, AnonymousIdentity, OnionRouter, KademliaNode } = require('anonymous-p2p');
+const { AnonymousP2PNode } = require('anonymous-p2p');
 
-// Create and start a node
-const node = new AnonymousP2PNode(3000);
-
-// NAT traversal example
-node.attemptNATHolePunch('192.168.1.42:4000').then(() => {
-    console.log('NAT hole punching succeeded!');
-}).catch(() => {
-    console.log('NAT hole punching failed.');
+// Unstructured mesh (default): each node connects to random peers
+const node1 = new AnonymousP2PNode(3000, {
+  meshType: 'unstructured',
+  maxPeerConnections: 8 // max random peers
 });
 
-node.on('anonymousMessage', (message) => {
-    console.log('Received anonymous message:', message);
+// Structured mesh: supernode
+const supernode = new AnonymousP2PNode(4000, {
+  meshType: 'structured',
+  role: 'supernode',
+  supernodeList: ['127.0.0.1:4000', '127.0.0.1:4001'] // list of all supernodes
 });
 
-node.on('peerConnected', (peerId) => {
-    console.log('New peer connected:', peerId);
+// Structured mesh: leaf node
+const leaf = new AnonymousP2PNode(5000, {
+  meshType: 'structured',
+  role: 'leaf',
+  supernodeList: ['127.0.0.1:4000', '127.0.0.1:4001'] // connect only to supernodes
 });
-
-// Store data anonymously
-node.storeData('secret-key', 'sensitive-data').then(() => {
-    console.log('Data stored anonymously');
-});
-
-// Retrieve data
-node.retrieveData('secret-key').then((data) => {
-    console.log('Retrieved data:', data);
-});
-
-// Send anonymous message (requires other nodes to be running)
-// node.sendAnonymousMessage('Hello anonymous world!', 'target-pseudonym');
-
-console.log('Anonymous P2P Network Node Stats:', node.getNetworkStats());
 ```
+
+## Mesh Topology Options
+
+- `meshType`: `'structured'` or `'unstructured'`
+  - **Unstructured:** Each node connects to up to `maxPeerConnections` random peers from the DHT.
+  - **Structured:** Nodes are either `supernode` or `leaf`:
+    - **Supernode:** Connects to all other supernodes in `supernodeList`.
+    - **Leaf:** Connects only to supernodes in `supernodeList`.
+- `role`: `'supernode'` or `'leaf'` (only for structured mesh)
+- `supernodeList`: Array of addresses (e.g., `['ip:port', ...]`) for structured mesh
+- `maxPeerConnections`: Max random peers for unstructured mesh
 
 ## API
 
 ### Classes
-- `AnonymousP2PNode(port)` — Main node, event emitter
+- `AnonymousP2PNode(port, options)` — Main node, event emitter
 - `AnonymousIdentity` — Identity and ZK proof
 - `OnionRouter` — Onion routing logic
 - `KademliaNode` — DHT logic
